@@ -9,39 +9,25 @@ namespace blog_api.Controllers
     public class UserController : ControllerBase
     {
         private readonly UserService _userService;
-        private readonly TokenService _tokenService;
 
-        public UserController(UserService userService, TokenService tokenService)
+        public UserController(UserService userService)
         {
             _userService = userService;
-            _tokenService = tokenService;
         }
-
+        
         [HttpPost("register")]
-        [ProducesResponseType(typeof(TokenResponse), 200)]
-        [ProducesResponseType(400)]
-        [ProducesResponseType(typeof(Response), 500)]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(TokenResponse),200)]
+        [ProducesResponseType(typeof(Response),400)]
+        [ProducesResponseType(typeof(Response),500)]
         public async Task<IActionResult> Register([FromBody] UserRegisterModel model)
         {
             if (!ModelState.IsValid)
-                return BadRequest();
+                return BadRequest(ModelState);
+            
+            var tokenResponse = await _userService.RegisterUser(model);
 
-            try
-            {
-                var user = await _userService.RegisterUser(model);
-                var token = _tokenService.GenerateJwtToken(user.Id);
-                
-                var response = new TokenResponse
-                {
-                    Token = token
-                };
-
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = "An unexpected error occurred.", Error = ex.Message });
-            }
+            return Ok(tokenResponse);
         }
     }
 }

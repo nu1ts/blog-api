@@ -19,7 +19,7 @@ public class TokenService
             new (JwtRegisteredClaimNames.Exp, new DateTimeOffset(expiresAt).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
             new (JwtRegisteredClaimNames.Iat, new DateTimeOffset(issuedAt).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
             new (JwtRegisteredClaimNames.Iss, AuthOptions.Issuer),
-            new (JwtRegisteredClaimNames.Aud, AuthOptions.Audience),
+            new (JwtRegisteredClaimNames.Aud, AuthOptions.Audience)
         };
         
         var key = AuthOptions.GetSymmetricSecurityKey();

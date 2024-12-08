@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using blog_api.Validation;
 
 namespace blog_api.Models;
 
@@ -10,6 +11,7 @@ public class UserRegisterModel
     
     [Required]
     [MinLength(6)]
+    [PasswordValidation]
     public string Password { get; set; }
     
     [Required]

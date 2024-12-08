@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using blog_api;
 using blog_api.Data;
+using blog_api.Middleware;
 using blog_api.Options;
 using blog_api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -15,7 +16,6 @@ builder.Services.AddMvc().AddJsonOptions(opts =>{
 });
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
@@ -86,6 +86,7 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<ErrorHandlingMiddleware>();
 
 app.MapControllers();
 
