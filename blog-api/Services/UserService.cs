@@ -1,8 +1,7 @@
-﻿using blog_api.Data;
+﻿using System.IdentityModel.Tokens.Jwt;
+using blog_api.Data;
 using blog_api.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
-using System.Text;
 using blog_api.Exceptions;
 
 namespace blog_api.Services
@@ -11,11 +10,13 @@ namespace blog_api.Services
     {
         private readonly ApplicationDbContext _dbContext;
         private readonly TokenService _tokenService;
+        private readonly BlacklistService _blacklistService;
 
-        public UserService(ApplicationDbContext dbContext, TokenService tokenService)
+        public UserService(ApplicationDbContext dbContext, TokenService tokenService, BlacklistService blacklistService)
         {
             _dbContext = dbContext;
             _tokenService = tokenService;
+            _blacklistService = blacklistService;
         }
 
         public async Task<TokenResponse> RegisterUser(UserRegisterModel model)
@@ -28,7 +29,7 @@ namespace blog_api.Services
                 Id = Guid.NewGuid(),
                 CreateTime = DateTime.UtcNow,
                 FullName = model.FullName,
-                Password = HashPassword(model.Password),
+                Password = BCrypt.Net.BCrypt.HashPassword(model.Password),
                 BirthDate = model.BirthDate,
                 Gender = model.Gender,
                 Email = model.Email,
@@ -43,21 +44,75 @@ namespace blog_api.Services
             return new TokenResponse { Token = token };
         }
 
-        private static string HashPassword(string password)
+        public async Task<TokenResponse> LoginUser(LoginCredentials credentials)
         {
-            using var hmac = new HMACSHA256();
+            var user = await _dbContext.Users.SingleOrDefaultAsync(u => u.Email == credentials.Email);
+            if (user == null)
+                throw new LoginException();
 
-            var salt = hmac.Key;
+            if (!BCrypt.Net.BCrypt.Verify(credentials.Password, user.Password))
+                throw new LoginException();
+
+            var token = _tokenService.GenerateJwtToken(user.Id);
+
+            return new TokenResponse { Token = token };
+        }
+        
+        public async Task<Response> LogoutUser(string token)
+        {
+            var jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(token);
+            var expirationDate = jwtToken.ValidTo;
+
+            await _blacklistService.AddToken(token, expirationDate);
+
+            return new Response { Status = "200 OK", Message = "Logged out" };
+        }
+        
+        public async Task<UserDto> GetUserProfile(Guid userId)
+        {
+            var user = await _dbContext.Users
+                .AsNoTracking()
+                .SingleOrDefaultAsync(u => u.Id == userId);
             
-            var passwordBytes = Encoding.UTF8.GetBytes(password);
-            var passwordWithSalt = new byte[passwordBytes.Length + salt.Length];
-
-            Buffer.BlockCopy(passwordBytes, 0, passwordWithSalt, 0, passwordBytes.Length);
-            Buffer.BlockCopy(salt, 0, passwordWithSalt, passwordBytes.Length, salt.Length);
-
-            var hash = hmac.ComputeHash(passwordWithSalt);
+            if (user == null)
+                throw new UserException();
             
-            return Convert.ToBase64String(salt.Concat(hash).ToArray());
+            var userDto = new UserDto
+            {
+                Id = user.Id,
+                CreateTime = user.CreateTime,
+                FullName = user.FullName,
+                BirthDate = user.BirthDate,
+                Gender = user.Gender,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber
+            };
+
+            return userDto;
+        }
+        
+        public async Task UpdateUserProfile(UserEditModel model, Guid userId)
+        {
+            var user = await _dbContext.Users.SingleOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+                throw new UserException();
+            
+            if (await _dbContext.Users.AnyAsync(u => u.Email == model.Email && u.Id != userId))
+                throw new EmailException(model.Email);
+            
+            if (!string.IsNullOrEmpty(model.PhoneNumber) &&
+                await _dbContext.Users.AnyAsync(u => u.PhoneNumber == model.PhoneNumber && u.Id != userId))
+                throw new PhoneException(model.PhoneNumber);
+            
+            user.FullName = model.FullName;
+            user.BirthDate = model.BirthDate;
+            user.Gender = model.Gender;
+            user.Email = model.Email;
+            user.PhoneNumber = model.PhoneNumber;
+            
+            _dbContext.Users.Update(user);
+            await _dbContext.SaveChangesAsync();
         }
     }
 }

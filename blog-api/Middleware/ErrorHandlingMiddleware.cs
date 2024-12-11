@@ -32,7 +32,10 @@ public class ErrorHandlingMiddleware
         var (statusCode, message) = exception switch
         {
             EmailException emailEx => ((int)HttpStatusCode.BadRequest, emailEx.Message),
-            _ => ((int)HttpStatusCode.InternalServerError, "An unexpected error occurred")
+            LoginException loginEx => ((int)HttpStatusCode.BadRequest, loginEx.Message),
+            UserException userEx => ((int)HttpStatusCode.NotFound, userEx.Message),
+            PhoneException phoneEx => ((int)HttpStatusCode.BadRequest, phoneEx.Message),
+            _ => ((int)HttpStatusCode.InternalServerError, exception.Message)
         };
 
         context.Response.StatusCode = statusCode;

@@ -18,7 +18,7 @@ public class JwtEvents : JwtBearerEvents
         if (context.SecurityToken is JwtSecurityToken { RawData: var tokenRaw } 
             && await _blacklistService.IsTokenBlacklisted(tokenRaw))
         {
-            context.Fail("Token is blacklisted");
+            context.Fail("Access denied: Token is banned");
         }
     }
 }
