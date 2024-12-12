@@ -44,6 +44,7 @@ builder.Services.AddScoped<JwtEvents>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<DevelopmentDatabaseService>();
+builder.Services.AddScoped<TagService>();
 
 builder.Services.AddControllers();
 
