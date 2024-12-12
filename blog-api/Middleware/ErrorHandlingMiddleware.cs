@@ -35,6 +35,7 @@ public class ErrorHandlingMiddleware
             LoginException loginEx => ((int)HttpStatusCode.BadRequest, loginEx.Message),
             UserException userEx => ((int)HttpStatusCode.NotFound, userEx.Message),
             PhoneException phoneEx => ((int)HttpStatusCode.BadRequest, phoneEx.Message),
+            ArgumentException argumentEx => ((int)HttpStatusCode.BadRequest, argumentEx.Message),
             _ => ((int)HttpStatusCode.InternalServerError, exception.Message)
         };
 
