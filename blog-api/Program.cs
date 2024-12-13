@@ -18,8 +18,9 @@ builder.Services.AddMvc().AddJsonOptions(opts =>
 });
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+var garConnectionString = builder.Configuration.GetConnectionString("GarConnection");
+builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<GarDbContext>(options => options.UseNpgsql(garConnectionString));
 
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -46,6 +47,7 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<DevelopmentDatabaseService>();
 builder.Services.AddScoped<TagService>();
 builder.Services.AddScoped<PostService>();
+builder.Services.AddScoped<AddressService>();
 
 builder.Services.AddControllers();
 
