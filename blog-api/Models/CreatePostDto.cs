@@ -14,11 +14,9 @@ public class CreatePostDto
     [Required]
     [Range(0, int.MaxValue, ErrorMessage = "ReadingTime must be positive")]
     public int ReadingTime { get; set; }
+
+    [Url] public string? Image { get; set; } = null;
     
-    [Url]
-    public string Image { get; set; }
-    
-    //[ValidAddressId]
     public Guid? AddressId { get; set; }
 
     [Required]

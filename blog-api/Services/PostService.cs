@@ -1,4 +1,5 @@
 ﻿using blog_api.Data;
+using blog_api.Exceptions;
 using blog_api.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,10 +8,12 @@ namespace blog_api.Services;
 public class PostService
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly GarDbContext _garDbContext;
 
-    public PostService(ApplicationDbContext dbContext)
+    public PostService(ApplicationDbContext dbContext, GarDbContext garDbContext)
     {
         _dbContext = dbContext;
+        _garDbContext = garDbContext;
     }
 
     public async Task<PostPagedListDto> GetPostList(
@@ -22,21 +25,25 @@ public class PostService
         bool onlyMyCommunities,
         int page,
         int size,
-        Guid userId
+        Guid? userId
     )
     {
         ValidatePaginationAndFiltering(page, size, min, max);
         var query = _dbContext.Posts.AsQueryable();
-        
+
         query = Filter(query, tags, author, min, max, onlyMyCommunities, userId);
         query = Sort(query, sorting);
-        
+
         var totalCount = await query.CountAsync();
-        
+
         var pagesCount = (int)Math.Ceiling((double)totalCount / size);
         ValidatePage(page, pagesCount == 0 ? 1 : pagesCount);
-        
+
         var posts = await Pagination(query, page, size);
+        
+        var userLikes = userId.HasValue 
+            ? await GetUserLikes(userId.Value) 
+            : new List<Guid>();
 
         var postDto = posts.Select(post => new PostDto
         {
@@ -49,7 +56,7 @@ public class PostService
             AuthorId = post.AuthorId,
             Author = post.Author,
             Likes = post.Likes,
-            HasLike = post.Likes > 0,
+            HasLike = userLikes.Contains(post.Id),
             CommentsCount = post.CommentsCount,
             Tags = _dbContext.Tags
                 .Where(tag => post.Tags.Contains(tag.Id))
@@ -72,6 +79,175 @@ public class PostService
             }
         };
     }
+    
+    public async Task<Guid> CreatePost(CreatePostDto createPostDto, User user)
+    {
+        if (createPostDto.AddressId.HasValue)
+        {
+            var isValidAddress = await IsAddressValid(createPostDto.AddressId.Value);
+            if (!isValidAddress)
+            {
+                throw new AddressException();
+            }
+        }
+        
+        var existingTags = await _dbContext.Tags
+            .Where(tag => createPostDto.Tags.Contains(tag.Id))
+            .ToListAsync();
+
+        if (existingTags.Count != createPostDto.Tags.Count)
+        {
+            throw new TagException();
+        }
+        
+        var post = new Post
+        {
+            Id = Guid.NewGuid(),
+            CreateTime = DateTime.UtcNow,
+            Title = createPostDto.Title,
+            Description = createPostDto.Description,
+            ReadingTime = createPostDto.ReadingTime,
+            Image = createPostDto.Image,
+            AuthorId = user.Id,
+            Author = user.FullName,
+            CommunityId = null,
+            CommunityName = null,
+            AddressId = createPostDto.AddressId,
+            Likes = 0,
+            CommentsCount = 0,
+            Tags = createPostDto.Tags,
+            Comments = new List<Comment>()
+        };
+        
+        _dbContext.Posts.Add(post);
+        user.Posts!.Add(post.Id);
+
+        await _dbContext.SaveChangesAsync();
+
+        return post.Id;
+    }
+    
+    public async Task<PostFullDto> GetPost(Guid postId, Guid? userId)
+    {
+        var post = await _dbContext.Posts
+            .Include(p => p.Comments)
+            .FirstOrDefaultAsync(p => p.Id == postId);
+
+        if (post == null)
+            throw new PostException(postId);
+        
+        var hasLike = userId.HasValue && _dbContext.Users
+            .Any(u => u.Id == userId && u.Likes!.Contains(post.Id));
+        
+        // TODO: IsPostAvailable(community)
+        
+        var comments = post.Comments
+            .Where(c => c.ParentId == null)
+            .Select(comment => new CommentDto
+            {
+                Id = comment.Id,
+                CreateTime = comment.CreateTime,
+                Content = comment.Content,
+                ModifiedDate = comment.ModifiedDate,
+                DeleteDate = comment.DeleteDate,
+                AuthorId = comment.AuthorId,
+                Author = comment.Author,
+                SubComments = 0 //TODO: subcomments count
+            })
+            .ToList();
+        
+        var tags = _dbContext.Tags
+            .Where(tag => post.Tags.Contains(tag.Id))
+            .Select(tag => new TagDto
+            {
+                Id = tag.Id,
+                CreateTime = tag.CreateTime,
+                Name = tag.Name
+            })
+            .ToList();
+        
+        var postDto = new PostFullDto
+        {
+            Id = post.Id,
+            CreateTime = post.CreateTime,
+            Title = post.Title,
+            Description = post.Description,
+            ReadingTime = post.ReadingTime,
+            Image = post.Image,
+            AuthorId = post.AuthorId,
+            Author = post.Author,
+            CommunityId = post.CommunityId,
+            CommunityName = post.CommunityName,
+            AddressId = post.AddressId,
+            Likes = post.Likes,
+            HasLike = hasLike,
+            CommentsCount = post.CommentsCount,
+            Tags = tags,
+            Comments = comments
+        };
+
+        return postDto;
+    }
+    
+    public async Task AddLike(Guid postId, Guid userId)
+    {
+        var post = await _dbContext.Posts.FirstOrDefaultAsync(p => p.Id == postId);
+        if (post == null)
+            throw new PostException(postId);
+        
+        // TODO: IsPostAvailable(community)
+
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null)
+            throw new UserException();
+        
+        if (user.Likes!.Contains(postId))
+            throw new InvalidOperationException("User has already liked this post.");
+        
+        user.Likes.Add(postId);
+        post.Likes += 1;
+
+        await _dbContext.SaveChangesAsync();
+    }
+    
+    public async Task RemoveLike(Guid postId, Guid userId)
+    {
+        var post = await _dbContext.Posts.FirstOrDefaultAsync(p => p.Id == postId);
+        if (post == null)
+            throw new PostException(postId);
+        
+        // TODO: IsPostAvailable(community)
+
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null)
+            throw new UserException();
+        
+        if (!user.Likes!.Contains(postId))
+            throw new InvalidOperationException("User has not liked this post.");
+        
+        user.Likes.Remove(postId);
+        post.Likes -= 1;
+
+        await _dbContext.SaveChangesAsync();
+    }
+
+    
+    private async Task<bool> IsAddressValid(Guid addressId)
+    {
+        var addressExists = await _garDbContext.AsAddrObjs.AnyAsync(a => a.Objectguid == addressId);
+        var houseExists = await _garDbContext.AsHouses.AnyAsync(a => a.Objectguid == addressId);
+        return addressExists || houseExists;
+    }
+    
+    private async Task<List<Guid>> GetUserLikes(Guid userId)
+    {
+        var user = await _dbContext.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.Likes)
+            .FirstOrDefaultAsync();
+
+        return user ?? new List<Guid>();
+    }
 
     private static IQueryable<Post> Filter(
         IQueryable<Post> query,
@@ -80,7 +256,7 @@ public class PostService
         int? min,
         int? max,
         bool onlyMyCommunities,
-        Guid userId
+        Guid? userId
     )
     {
         if (tags != null && tags.Any())
@@ -91,7 +267,7 @@ public class PostService
 
         if (!string.IsNullOrEmpty(author))
         {
-            query = query.Where(p => p.Author.ToUpper().Contains(author.ToUpper()));
+            query = query.Where(p => p.Author.ToUpper().Contains(author, StringComparison.OrdinalIgnoreCase));
         }
 
         if (min.HasValue)

@@ -28,4 +28,8 @@ public class User
     
     [Phone]
     public string? PhoneNumber { get; set; }
+    
+    public List<Guid>? Posts { get; set; }
+    
+    public List<Guid>? Likes { get; set; }
 }

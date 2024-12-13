@@ -33,7 +33,9 @@ namespace blog_api.Services
                 BirthDate = model.BirthDate,
                 Gender = model.Gender,
                 Email = model.Email,
-                PhoneNumber = model.PhoneNumber
+                PhoneNumber = model.PhoneNumber,
+                Posts = new List<Guid>(),
+                Likes = new List<Guid>()
             };
             
             await _dbContext.Users.AddAsync(user);
