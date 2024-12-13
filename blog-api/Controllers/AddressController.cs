@@ -18,11 +18,22 @@ public class AddressController : ControllerBase
     [HttpGet]
     [Route("search")]
     [Produces("application/json")]
-    [ProducesResponseType(typeof(SearchAddressModel), 200)]
+    [ProducesResponseType(typeof(List<SearchAddressModel>), 200)]
     [ProducesResponseType(typeof(Response), 500)]
     public async Task<IActionResult> Search(long parentObjectId, string? query)
     {
         var list = await _addressService.Search(parentObjectId, query);
+        return Ok(list);
+    }
+    
+    [HttpGet]
+    [Route("chain")]
+    [Produces("application/json")]
+    [ProducesResponseType(typeof(List<SearchAddressModel>), 200)]
+    [ProducesResponseType(typeof(Response), 500)]
+    public async Task<IActionResult> Chain(Guid objectGuid)
+    {
+        var list = await _addressService.Chain(objectGuid);
         return Ok(list);
     }
 }

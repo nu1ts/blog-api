@@ -42,6 +42,77 @@ public class AddressService
         
         return result;
     }
+    
+    public async Task<List<SearchAddressModel>> Chain(Guid objectGuid)
+    {
+        var result = new List<SearchAddressModel>();
+        
+        var house = await _garDbContext.AsHouses
+            .FirstOrDefaultAsync(h => h.Objectguid == objectGuid && h.Isactive == 1 && h.Isactual == 1);
+
+        if (house != null)
+        {
+            result.Add(new SearchAddressModel
+            {
+                ObjectId = house.Objectid,
+                ObjectGuid = house.Objectguid,
+                Text = BuildHouseName(house),
+                ObjectLevel = GarAddressLevel.Building,
+                ObjectLevelText = GetAddressName(10)
+            });
+            
+            await AddParent(house.Objectid, result);
+
+            return result;
+        }
+        
+        var currentObject = await _garDbContext.AsAddrObjs
+            .FirstOrDefaultAsync(o => o.Objectguid == objectGuid && o.Isactive == 1 && o.Isactual == 1);
+
+        if (currentObject == null)
+            return result;
+
+        result.Add(new SearchAddressModel
+        {
+            ObjectId = currentObject.Objectid,
+            ObjectGuid = currentObject.Objectguid,
+            Text = $"{currentObject.Typename} {currentObject.Name}",
+            ObjectLevel = GetAddressLevel(Convert.ToInt32(currentObject.Level)),
+            ObjectLevelText = GetAddressName(Convert.ToInt32(currentObject.Level))
+        });
+        
+        await AddParent(currentObject.Objectid, result);
+
+        return result;
+    }
+
+    private async Task AddParent(long objectId, List<SearchAddressModel> result)
+    {
+        var parentHierarchy = await _garDbContext.AsAdmHierarchies
+            .FirstOrDefaultAsync(h => h.Objectid == objectId && h.Isactive == 1);
+
+        if (parentHierarchy?.Parentobjid == null)
+            return;
+
+        var parentObjectId = parentHierarchy.Parentobjid.Value;
+        
+        var parentObject = await _garDbContext.AsAddrObjs
+            .FirstOrDefaultAsync(o => o.Objectid == parentObjectId && o.Isactive == 1 && o.Isactual == 1);
+
+        if (parentObject == null)
+            return;
+        
+        result.Insert(0, new SearchAddressModel
+        {
+            ObjectId = parentObject.Objectid,
+            ObjectGuid = parentObject.Objectguid,
+            Text = $"{parentObject.Typename} {parentObject.Name}",
+            ObjectLevel = GetAddressLevel(Convert.ToInt32(parentObject.Level)),
+            ObjectLevelText = GetAddressName(Convert.ToInt32(parentObject.Level))
+        });
+        
+        await AddParent(parentObjectId, result);
+    }
 
     private async Task<List<SearchAddressModel>> SearchInAddrObj(IQueryable<AsAdmHierarchy> hierarchyQuery)
     {
