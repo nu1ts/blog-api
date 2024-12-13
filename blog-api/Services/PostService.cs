@@ -116,7 +116,7 @@ public class PostService
             Likes = 0,
             CommentsCount = 0,
             Tags = createPostDto.Tags,
-            Comments = new List<Comment>()
+            Comments = new List<Guid>()
         };
         
         _dbContext.Posts.Add(post);
@@ -130,19 +130,16 @@ public class PostService
     public async Task<PostFullDto> GetPost(Guid postId, Guid? userId)
     {
         var post = await _dbContext.Posts
-            .Include(p => p.Comments)
             .FirstOrDefaultAsync(p => p.Id == postId);
 
         if (post == null)
             throw new PostException(postId);
-        
+
         var hasLike = userId.HasValue && _dbContext.Users
             .Any(u => u.Id == userId && u.Likes!.Contains(post.Id));
         
-        // TODO: IsPostAvailable(community)
-        
-        var comments = post.Comments
-            .Where(c => c.ParentId == null)
+        var comments = await _dbContext.Comments
+            .Where(c => post.Comments.Contains(c.Id))
             .Select(comment => new CommentDto
             {
                 Id = comment.Id,
@@ -152,10 +149,10 @@ public class PostService
                 DeleteDate = comment.DeleteDate,
                 AuthorId = comment.AuthorId,
                 Author = comment.Author,
-                SubComments = 0 //TODO: subcomments count
+                SubComments = comment.SubComments
             })
-            .ToList();
-        
+            .ToListAsync();
+
         var tags = _dbContext.Tags
             .Where(tag => post.Tags.Contains(tag.Id))
             .Select(tag => new TagDto
@@ -165,7 +162,7 @@ public class PostService
                 Name = tag.Name
             })
             .ToList();
-        
+
         var postDto = new PostFullDto
         {
             Id = post.Id,

@@ -39,6 +39,10 @@ public class ErrorHandlingMiddleware
             TagException tagEx => ((int)HttpStatusCode.NotFound, tagEx.Message),
             AddressException addressEx => ((int)HttpStatusCode.NotFound, addressEx.Message),
             PostException postEx => ((int)HttpStatusCode.NotFound, postEx.Message),
+            CommentException commentEx => ((int)HttpStatusCode.NotFound, commentEx.Message),
+            RootException rootEx => ((int)HttpStatusCode.BadRequest, rootEx.Message),
+            ParentCommentException parentEx => ((int)HttpStatusCode.NotFound, parentEx.Message),
+            DeletedCommentException deletedEx => ((int)HttpStatusCode.NotFound, deletedEx.Message),
             _ => ((int)HttpStatusCode.InternalServerError, exception.Message)
         };
 

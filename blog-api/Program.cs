@@ -49,6 +49,7 @@ builder.Services.AddScoped<TagService>();
 builder.Services.AddScoped<PostService>();
 builder.Services.AddScoped<AddressService>();
 builder.Services.AddScoped<AuthorService>();
+builder.Services.AddScoped<CommentService>();
 
 builder.Services.AddControllers();
 

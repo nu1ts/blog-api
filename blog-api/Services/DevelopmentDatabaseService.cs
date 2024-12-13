@@ -16,6 +16,7 @@ public class DevelopmentDatabaseService
         _dbContext.Users.RemoveRange(_dbContext.Users);
         _dbContext.BlacklistedTokens.RemoveRange(_dbContext.BlacklistedTokens);
         _dbContext.Posts.RemoveRange(_dbContext.Posts);
+        _dbContext.Comments.RemoveRange(_dbContext.Comments);
         
         await _dbContext.SaveChangesAsync();
     }

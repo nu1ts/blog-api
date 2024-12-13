@@ -46,5 +46,5 @@ public class Post
     public List<Guid> Tags { get; set; }
     
     [Required]
-    public List<Comment> Comments { get; set; }
+    public List<Guid> Comments { get; set; }
 }

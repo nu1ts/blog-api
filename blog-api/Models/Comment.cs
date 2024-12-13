@@ -28,8 +28,6 @@ public class Comment
     [Required]
     public int SubComments { get; set; }
     
-    public List<Comment> SubCommentsList { get; set; }
-    
     public Guid? ParentId { get; set; }
     
     public Guid PostId { get; set; }
