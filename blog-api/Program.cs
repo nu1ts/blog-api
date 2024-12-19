@@ -17,10 +17,16 @@ builder.Services.AddMvc().AddJsonOptions(opts =>
     opts.JsonSerializerOptions.Converters.Add(enumConverter);
 });
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-var garConnectionString = builder.Configuration.GetConnectionString("GarConnection");
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
-builder.Services.AddDbContext<GarDbContext>(options => options.UseNpgsql(garConnectionString));
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
+    .AddEnvironmentVariables();
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("MainDatabase")));
+
+builder.Services.AddDbContext<GarDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("GarDatabase")));
 
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -44,7 +50,6 @@ builder.Services.AddScoped<BlacklistService>();
 builder.Services.AddScoped<JwtEvents>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TokenService>();
-builder.Services.AddScoped<DevelopmentDatabaseService>();
 builder.Services.AddScoped<TagService>();
 builder.Services.AddScoped<PostService>();
 builder.Services.AddScoped<AddressService>();
@@ -75,10 +80,12 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    
-    using var scope = app.Services.CreateScope();
-    var dbService = scope.ServiceProvider.GetRequiredService<DevelopmentDatabaseService>();
-    await dbService.ClearUsersAsync();
+}
+
+using (var scope = app.Services.CreateScope())
+{
+    scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
+    scope.ServiceProvider.GetRequiredService<GarDbContext>().Database.Migrate();
 }
 
 app.UseHttpsRedirection();
