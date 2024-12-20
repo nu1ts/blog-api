@@ -19,7 +19,6 @@ services:
     networks:
       - default
       - internal
-  
   blog-db:
     image: postgres:15
     container_name: blog-db
@@ -34,8 +33,6 @@ services:
       - internal
     volumes:
       - blog-db_data:/var/lib/postgresql/data
-      
-    
   gar70-db:
     image: postgres:15
     container_name: gar70-db

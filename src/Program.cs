@@ -86,7 +86,6 @@ if (app.Environment.IsDevelopment())
 using (var scope = app.Services.CreateScope())
 {
     scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
-    scope.ServiceProvider.GetRequiredService<GarDbContext>().Database.Migrate();
 }
 
 app.UseHttpsRedirection();
