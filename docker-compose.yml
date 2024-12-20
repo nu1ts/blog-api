@@ -1,0 +1,62 @@
+services:
+  blog-api:
+    image: app:latest
+    container_name: app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - blog-db
+      - gar70-db
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionStrings__MainDatabase=${MAIN_DATABASE}
+      - ConnectionStrings__GarDatabase=${GAR_DATABASE}
+    restart: always
+    networks:
+      - default
+      - internal
+  
+  blog-db:
+    image: postgres:15
+    container_name: blog-db
+    expose:
+      - 5432
+    environment:
+      POSTGRES_USER: ${BLOG_USER}
+      POSTGRES_PASSWORD: ${BLOG_PASSWORD}
+      POSTGRES_DB: ${BLOG_NAME}
+    restart: always
+    networks:
+      - internal
+    volumes:
+      - blog-db_data:/var/lib/postgresql/data
+      
+    
+  gar70-db:
+    image: postgres:15
+    container_name: gar70-db
+    expose:
+      - 5433
+    environment:
+      POSTGRES_USER: ${GAR70_USER}
+      POSTGRES_PASSWORD: ${GAR70_PASSWORD}
+      POSTGRES_DB: ${GAR70_NAME}
+    restart: always
+    networks:
+      - internal
+    volumes:
+      - gar70-db_data:/var/lib/postgresql/data
+      - ./restore:/docker-entrypoint-initdb.d
+
+networks:
+  default:
+  internal:
+    internal: true
+
+volumes:
+  blog-db_data:
+  gar70-db_data:
