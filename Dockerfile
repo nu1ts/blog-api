@@ -10,7 +10,7 @@ FROM base AS final
 WORKDIR /app
 COPY --from=build /app .
 
-COPY restore-db.sh /docker-entrypoint-initdb.d/restore-db.sh
+COPY /restore/restore-db.sh /docker-entrypoint-initdb.d/restore-db.sh
 RUN chmod +x /docker-entrypoint-initdb.d/restore-db.sh
 
 ENTRYPOINT ["dotnet", "src.dll"]
