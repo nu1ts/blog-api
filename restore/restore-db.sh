@@ -4,7 +4,7 @@ set -e
 BACKUP_FILE=/restore/gar70.backup
 
 echo "Waiting for database to be ready..."
-until pg_isready -h gar70-db -p 5432 -U $GAR70_USER; do
+until pg_isready -h gar70-db -p 5432 -U "${GAR70_USER}"; do
   sleep 1
 done
 

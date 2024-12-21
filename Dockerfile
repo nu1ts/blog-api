@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install --no-install-recommends -y postgresql-client && rm -rf /var/lib/apt/lists/*
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
@@ -16,7 +16,7 @@ COPY restore/ /restore/
 
 RUN chmod +x /restore/restore-db.sh
 
-LABEL MAINTAINER="Лугачёв Никита Владимирович <nikitalugachev149th@gmail.com>"
+LABEL org.opencontainers.image.authors="Лугачёв Никита Владимирович <nikitalugachev149th@gmail.com>"
 ENV APP_VERSION="1.0.0"
 
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
