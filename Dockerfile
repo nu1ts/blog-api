@@ -16,4 +16,10 @@ COPY restore/ /restore/
 
 RUN chmod +x /restore/restore-db.sh
 
+LABEL MAINTAINER="Лугачёв Никита Владимирович <nikitalugachev149th@gmail.com>"
+ENV APP_VERSION="1.0.0"
+
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
+
 ENTRYPOINT ["/bin/bash", "-c", "/restore/restore-db.sh && dotnet src.dll"]
