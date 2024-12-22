@@ -59,6 +59,8 @@ builder.Services.AddScoped<CommentService>();
 
 builder.Services.AddControllers();
 
+builder.Services.AddHealthChecks();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(option =>
 {
@@ -89,6 +91,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseHttpsRedirection();
+
+app.MapHealthChecks("/health");
 
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
