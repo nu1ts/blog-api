@@ -18,16 +18,21 @@ services:
     restart: on-failure
     networks:
       - default
-      - internal
+      - internal_network
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://127.0.0.1:8080/health || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: 1.00
   db:
     image: postgres:15-alpine
     container_name: db
+    hostname: database_host
     expose:
       - 5432
     environment:
@@ -36,7 +41,7 @@ services:
       POSTGRES_DB: ${DB_NAME}
     restart: always
     networks:
-      - internal
+      - internal_network
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -56,7 +61,7 @@ services:
       POSTGRES_DB: ${GAR70_NAME}
     restart: always
     networks:
-      - internal
+      - internal_network
     volumes:
       - gar70-db_data:/var/lib/postgresql/data
     healthcheck:
@@ -68,7 +73,7 @@ services:
 
 networks:
   default:
-  internal:
+  internal_network:
     internal: true
 
 volumes:
