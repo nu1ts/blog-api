@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     depends_on:
-      - blog-db
+      - db
       - gar70-db
     env_file:
       - .env
@@ -15,7 +15,7 @@ services:
     environment:
       - ConnectionStrings__MainDatabase=${MAIN_DATABASE}
       - ConnectionStrings__GarDatabase=${GAR_DATABASE}
-    restart: always
+    restart: on-failure
     networks:
       - default
       - internal
@@ -25,28 +25,28 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-  blog-db:
-    image: postgres:15
-    container_name: blog-db
+  db:
+    image: postgres:15-alpine
+    container_name: db
     expose:
       - 5432
     environment:
-      POSTGRES_USER: ${BLOG_USER}
-      POSTGRES_PASSWORD: ${BLOG_PASSWORD}
-      POSTGRES_DB: ${BLOG_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     restart: always
     networks:
       - internal
     volumes:
-      - blog-db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${BLOG_USER} -d ${BLOG_NAME} -h 127.0.0.1 || exit 1" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME} -h 127.0.0.1 || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 5s
   gar70-db:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: gar70-db
     expose:
       - 5432
@@ -72,5 +72,5 @@ networks:
     internal: true
 
 volumes:
-  blog-db_data:
+  db_data:
   gar70-db_data:
